@@ -143,16 +143,17 @@
             const newKey = generateKey();
             setEncryptionKey(newKey);
 
-            const encrypted = [];
+            // Encrypt blocks - matching C++ implementation exactly
+            const allEncryptedData = [];
             for (let i = 0; i < fileData.length; i += BLOCK_SIZE) {
-              const blockData = fileData.slice(i, i + BLOCK_SIZE);
+              const blockData = fileData.slice(i, Math.min(i + BLOCK_SIZE, fileData.length));
               const paddedBlock = padBlock(blockData);
               const encryptedBlock = xorBlock(paddedBlock, newKey);
-              encrypted.push(...encryptedBlock);
+              allEncryptedData.push(...encryptedBlock);
             }
 
             setFile(uploadedFile);
-            setEncryptedData(new Uint8Array(encrypted));
+            setEncryptedData(new Uint8Array(allEncryptedData));
             
             const keyContent = {
               key: toHex(newKey),
@@ -179,7 +180,7 @@
               console.log('File loaded successfully, size:', encryptedFileData.length);
               
               if (encryptedFileData.length === 0) {
-                alert(' File is empty!');
+                alert('❌ File is empty!');
                 return;
               }
               
@@ -191,30 +192,35 @@
               console.log('State updated successfully');
             } catch (error) {
               console.error('Error loading file:', error);
-              alert(' Failed to load encrypted file: ' + error.message);
+              alert('❌ Failed to load encrypted file: ' + error.message);
             }
           };
 
           const performDecryption = () => {
             const key = parseHexKey(userKey);
             if (!key) {
-              alert(' Invalid key format! Key must be 32 hexadecimal characters.');
+              alert('❌ Invalid key format! Key must be 32 hexadecimal characters.');
               return;
             }
 
             if (!encryptedData) {
-              alert(' No encrypted file loaded!');
+              alert('❌ No encrypted file loaded!');
               return;
             }
 
-            const decrypted = [];
+            // Decrypt blocks - matching C++ implementation exactly
+            const allDecryptedData = [];
             for (let i = 0; i < encryptedData.length; i += BLOCK_SIZE) {
-              const blockData = encryptedData.slice(i, i + BLOCK_SIZE);
-              const decryptedBlock = xorBlock(blockData, key);
-              decrypted.push(...decryptedBlock);
+              const blockData = encryptedData.slice(i, Math.min(i + BLOCK_SIZE, encryptedData.length));
+              
+              // Only decrypt if block is exactly BLOCK_SIZE (matching C++ logic)
+              if (blockData.length === BLOCK_SIZE) {
+                const decryptedBlock = xorBlock(blockData, key);
+                allDecryptedData.push(...decryptedBlock);
+              }
             }
 
-            setDecryptedData(new Uint8Array(decrypted));
+            setDecryptedData(new Uint8Array(allDecryptedData));
           };
 
           const downloadEncrypted = () => {
@@ -250,18 +256,9 @@ Blocks: ${keyFileContent.blocks}
           const downloadDecrypted = () => {
             if (!decryptedData) return;
             
-            // Remove padding (trailing zeros) - find last non-zero byte
-            let actualLength = decryptedData.length;
-            for (let i = decryptedData.length - 1; i >= 0; i--) {
-              if (decryptedData[i] !== 0) {
-                actualLength = i + 1;
-                break;
-              }
-            }
-            
-            const trimmedData = decryptedData.slice(0, actualLength);
-            
-            const blob = new Blob([trimmedData], { type: 'text/plain' });
+            // C++ writes all blocks including padding, so we keep the data as-is
+            // The padding (zeros) will be at the end but won't affect text files
+            const blob = new Blob([decryptedData], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -270,11 +267,6 @@ Blocks: ${keyFileContent.blocks}
             let downloadName = file.name;
             if (downloadName.endsWith('.enc')) {
               downloadName = downloadName.substring(0, downloadName.length - 4);
-            }
-            
-            // If still no .txt extension, ensure it has one
-            if (!downloadName.endsWith('.txt')) {
-              downloadName = downloadName + '.txt';
             }
             
             a.download = downloadName;
@@ -293,9 +285,9 @@ Blocks: ${keyFileContent.blocks}
             
             if (keyLine) {
               setUserKey(keyLine.trim());
-              alert(' Key loaded successfully!');
+              alert('✅ Key loaded successfully!');
             } else {
-              alert(' Could not find valid key in file!');
+              alert('❌ Could not find valid key in file!');
             }
           };
 
@@ -423,7 +415,7 @@ Blocks: ${keyFileContent.blocks}
                               </pre>
                             </div>
                             <p className="text-yellow-400 text-sm mt-3 flex items-center gap-2">
-                               Save this key! You'll need it to decrypt your file.
+                              ⚠️ Save this key! You'll need it to decrypt your file.
                             </p>
                           </div>
 
@@ -594,7 +586,7 @@ Blocks: ${keyFileContent.blocks}
                 </div>
 
                 <div className="mt-8 text-center text-gray-400 text-sm">
-                  <p> Educational implementation using XOR cipher • Not for production use</p>
+                  <p>⚠️ Educational implementation using XOR cipher • Not for production use</p>
                 </div>
               </div>
             </div>
