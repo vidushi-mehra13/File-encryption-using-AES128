@@ -1,1 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES-128 Encryption Tool</title>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
 
+    <script type="text/babel">
+        const { useState } = React;
+
+        // Lucide Icons as SVG
+        const Lock = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+        );
+
+        const Unlock = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+            </svg>
+        );
+
+        const Key = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+            </svg>
+        );
+
+        const Download = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        );
+
+        const Upload = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+        );
+
+        const Eye = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        );
+
+        const EyeOff = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+        );
+
+        const FileText = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+        );
+
+        const Shield = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+        );
+
+        const AESEncryptionTool = () => {
+          const [activeMode, setActiveMode] = useState('encrypt');
+          const [file, setFile] = useState(null);
+          const [encryptionKey, setEncryptionKey] = useState(null);
+          const [encryptedData, setEncryptedData] = useState(null);
+          const [decryptedData, setDecryptedData] = useState(null);
+          const [userKey, setUserKey] = useState('');
+          const [showKey, setShowKey] = useState(false);
+          const [keyFileContent, setKeyFileContent] = useState(null);
+          const BLOCK_SIZE = 16;
+
+          const xorBlock = (block, key) => {
+            return block.map((byte, i) => byte ^ key[i % BLOCK_SIZE]);
+          };
+
+          const generateKey = () => {
+            const newKey = new Uint8Array(BLOCK_SIZE);
+            for (let i = 0; i < BLOCK_SIZE; i++) {
+              newKey[i] = Math.floor(Math.random() * 256);
+            }
+            return newKey;
+          };
+
+          const padBlock = (block) => {
+            const padded = new Uint8Array(BLOCK_SIZE);
+            padded.set(block);
+            return padded;
+          };
+
+          const toHex = (bytes) => {
+            return Array.from(bytes)
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join('');
+          };
+
+          const parseHexKey = (hexStr) => {
+            const cleanHex = hexStr.replace(/\s/g, '');
+            if (cleanHex.length !== BLOCK_SIZE * 2) {
+              return null;
+            }
+            try {
+              const key = new Uint8Array(BLOCK_SIZE);
+              for (let i = 0; i < BLOCK_SIZE; i++) {
+                key[i] = parseInt(cleanHex.substr(i * 2, 2), 16);
+              }
+              return key;
+            } catch {
+              return null;
+            }
+          };
+
+          const handleEncryptFile = async (e) => {
+            const uploadedFile = e.target.files[0];
+            if (!uploadedFile) return;
+
+            const arrayBuffer = await uploadedFile.arrayBuffer();
+            const fileData = new Uint8Array(arrayBuffer);
+            
+            const newKey = generateKey();
+            setEncryptionKey(newKey);
+
+            // Encrypt blocks - matching C++ implementation exactly
+            const allEncryptedData = [];
+            for (let i = 0; i < fileData.length; i += BLOCK_SIZE) {
+              const blockData = fileData.slice(i, Math.min(i + BLOCK_SIZE, fileData.length));
+              const paddedBlock = padBlock(blockData);
+              const encryptedBlock = xorBlock(paddedBlock, newKey);
+              allEncryptedData.push(...encryptedBlock);
+            }
+
+            setFile(uploadedFile);
+            setEncryptedData(new Uint8Array(allEncryptedData));
+            
+            const keyContent = {
+              key: toHex(newKey),
+              originalFile: uploadedFile.name,
+              fileSize: fileData.length,
+              blocks: Math.ceil(fileData.length / BLOCK_SIZE)
+            };
+            setKeyFileContent(keyContent);
+          };
+
+          const handleDecrypt = async (e) => {
+            const uploadedFile = e.target.files[0];
+            if (!uploadedFile) {
+              console.log('No file selected');
+              return;
+            }
+
+            console.log('File selected:', uploadedFile.name, 'Size:', uploadedFile.size);
+
+            try {
+              const arrayBuffer = await uploadedFile.arrayBuffer();
+              const encryptedFileData = new Uint8Array(arrayBuffer);
+              
+              console.log('File loaded successfully, size:', encryptedFileData.length);
+              
+              if (encryptedFileData.length === 0) {
+                alert('❌ File is empty!');
+                return;
+              }
+              
+              setFile(uploadedFile);
+              setEncryptedData(encryptedFileData);
+              setDecryptedData(null);
+              setUserKey('');
+              
+              console.log('State updated successfully');
+            } catch (error) {
+              console.error('Error loading file:', error);
+              alert('❌ Failed to load encrypted file: ' + error.message);
+            }
+          };
+
+          const performDecryption = () => {
+            const key = parseHexKey(userKey);
+            if (!key) {
+              alert('❌ Invalid key format! Key must be 32 hexadecimal characters.');
+              return;
+            }
+
+            if (!encryptedData) {
+              alert('❌ No encrypted file loaded!');
+              return;
+            }
+
+            // Decrypt blocks - matching C++ implementation exactly
+            const allDecryptedData = [];
+            for (let i = 0; i < encryptedData.length; i += BLOCK_SIZE) {
+              const blockData = encryptedData.slice(i, Math.min(i + BLOCK_SIZE, encryptedData.length));
+              
+              // Only decrypt if block is exactly BLOCK_SIZE (matching C++ logic)
+              if (blockData.length === BLOCK_SIZE) {
+                const decryptedBlock = xorBlock(blockData, key);
+                allDecryptedData.push(...decryptedBlock);
+              }
+            }
+
+            setDecryptedData(new Uint8Array(allDecryptedData));
+          };
+
+          const downloadEncrypted = () => {
+            if (!encryptedData) return;
+            const blob = new Blob([encryptedData], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${file.name}.enc`;
+            a.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const downloadKeyFile = () => {
+            if (!keyFileContent) return;
+            const content = `AES-128 Encryption Key
+======================
+${keyFileContent.key}
+
+Original file: ${keyFileContent.originalFile}
+File size: ${keyFileContent.fileSize} bytes
+Blocks: ${keyFileContent.blocks}
+`;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${file.name}.key`;
+            a.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const downloadDecrypted = () => {
+            if (!decryptedData) return;
+            
+            // C++ writes all blocks including padding, so we keep the data as-is
+            // The padding (zeros) will be at the end but won't affect text files
+            const blob = new Blob([decryptedData], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            // Get the original filename without .enc
+            let downloadName = file.name;
+            if (downloadName.endsWith('.enc')) {
+              downloadName = downloadName.substring(0, downloadName.length - 4);
+            }
+            
+            a.download = downloadName;
+            console.log('Downloading as:', downloadName);
+            a.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const handleKeyFileLoad = async (e) => {
+            const keyFile = e.target.files[0];
+            if (!keyFile) return;
+
+            const text = await keyFile.text();
+            const lines = text.split('\n');
+            const keyLine = lines.find(line => /^[0-9a-f]{32}$/i.test(line.trim()));
+            
+            if (keyLine) {
+              setUserKey(keyLine.trim());
+              alert('✅ Key loaded successfully!');
+            } else {
+              alert('❌ Could not find valid key in file!');
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="w-12 h-12 text-purple-400"><Shield /></div>
+                    <h1 className="text-5xl font-bold text-white">AES-128 Encryption Tool</h1>
+                  </div>
+                  <p className="text-purple-300 text-lg">File Security & Protection System</p>
+                </div>
+
+                <div className="flex gap-4 mb-8">
+                  <button
+                    onClick={() => {
+                      setActiveMode('encrypt');
+                      setFile(null);
+                      setEncryptedData(null);
+                      setDecryptedData(null);
+                      setUserKey('');
+                    }}
+                    className={`flex-1 py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 ${
+                      activeMode === 'encrypt'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                        : 'bg-slate-800/50 text-gray-400 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <div className="w-6 h-6"><Lock /></div>
+                    Encrypt File
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveMode('decrypt');
+                      setFile(null);
+                      setEncryptedData(null);
+                      setDecryptedData(null);
+                      setEncryptionKey(null);
+                      setKeyFileContent(null);
+                      setUserKey('');
+                      setShowKey(false);
+                    }}
+                    className={`flex-1 py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 ${
+                      activeMode === 'decrypt'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                        : 'bg-slate-800/50 text-gray-400 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <div className="w-6 h-6"><Unlock /></div>
+                    Decrypt File
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveMode('viewkey');
+                      setFile(null);
+                      setEncryptedData(null);
+                      setDecryptedData(null);
+                    }}
+                    className={`flex-1 py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 ${
+                      activeMode === 'viewkey'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                        : 'bg-slate-800/50 text-gray-400 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <div className="w-6 h-6"><Key /></div>
+                    View Key
+                  </button>
+                </div>
+
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl border border-purple-500/20 p-8">
+                  {activeMode === 'encrypt' && (
+                    <div className="space-y-6">
+                      <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-2">
+                        <div className="w-8 h-8 text-purple-400"><Lock /></div>
+                        Encrypt Your File
+                      </h2>
+
+                      {!file ? (
+                        <label className="cursor-pointer block">
+                          <div className="border-2 border-dashed border-purple-500/50 rounded-xl p-16 hover:border-purple-400 hover:bg-slate-700/30 transition-all text-center">
+                            <div className="w-20 h-20 text-purple-400 mx-auto mb-4"><Upload /></div>
+                            <p className="text-2xl text-purple-200 mb-2">Click to upload file</p>
+                            <p className="text-gray-400">Any file type supported</p>
+                          </div>
+                          <input
+                            type="file"
+                            onChange={handleEncryptFile}
+                            className="hidden"
+                          />
+                        </label>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="bg-slate-700/50 rounded-lg p-6 border border-purple-500/20">
+                            <div className="flex items-center gap-4">
+                              <div className="bg-purple-600/30 p-4 rounded-lg">
+                                <div className="w-8 h-8 text-purple-300"><FileText /></div>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-white font-semibold text-xl">{file.name}</p>
+                                <p className="text-gray-400">
+                                  {(file.size / 1024).toFixed(2)} KB • {Math.ceil(file.size / BLOCK_SIZE)} blocks
+                                </p>
+                              </div>
+                              <div className="text-green-400 font-bold text-2xl">✓</div>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-900/50 rounded-lg p-6 border border-purple-500/30">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <div className="w-6 h-6 text-purple-400"><Key /></div>
+                                Generated Encryption Key
+                              </h3>
+                              <button
+                                onClick={() => setShowKey(!showKey)}
+                                className="text-purple-400 hover:text-purple-300 transition-colors"
+                              >
+                                <div className="w-5 h-5">{showKey ? <EyeOff /> : <Eye />}</div>
+                              </button>
+                            </div>
+                            <div className="bg-black/30 rounded p-4">
+                              <pre className="text-purple-300 font-mono text-lg break-all">
+                                {showKey ? toHex(encryptionKey) : '••••••••••••••••••••••••••••••••'}
+                              </pre>
+                            </div>
+                            <p className="text-yellow-400 text-sm mt-3 flex items-center gap-2">
+                              ⚠️ Save this key! You'll need it to decrypt your file.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <button
+                              onClick={downloadEncrypted}
+                              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-4 rounded-xl font-semibold text-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+                            >
+                              <div className="w-6 h-6"><Download /></div>
+                              Download Encrypted File
+                            </button>
+                            <button
+                              onClick={downloadKeyFile}
+                              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+                            >
+                              <div className="w-6 h-6"><Key /></div>
+                              Download Key File
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeMode === 'decrypt' && (
+                    <div className="space-y-6">
+                      <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-2">
+                        <div className="w-8 h-8 text-purple-400"><Unlock /></div>
+                        Decrypt Your File
+                      </h2>
+
+                      {!file || !encryptedData ? (
+                        <label className="cursor-pointer block">
+                          <div className="border-2 border-dashed border-purple-500/50 rounded-xl p-16 hover:border-purple-400 hover:bg-slate-700/30 transition-all text-center">
+                            <div className="w-20 h-20 text-purple-400 mx-auto mb-4"><Upload /></div>
+                            <p className="text-2xl text-purple-200 mb-2">Upload Encrypted File</p>
+                            <p className="text-gray-400">Select the .enc file</p>
+                          </div>
+                          <input
+                            type="file"
+                            onChange={handleDecrypt}
+                            accept=".enc,*"
+                            className="hidden"
+                          />
+                        </label>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="bg-slate-700/50 rounded-lg p-6 border border-purple-500/20">
+                            <div className="flex items-center gap-4">
+                              <div className="bg-purple-600/30 p-4 rounded-lg">
+                                <div className="w-8 h-8 text-purple-300"><Lock /></div>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-white font-semibold text-xl">{file.name}</p>
+                                <p className="text-gray-400">
+                                  {(encryptedData.length / 1024).toFixed(2)} KB • {Math.ceil(encryptedData.length / BLOCK_SIZE)} blocks
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-900/50 rounded-lg p-6 border border-purple-500/30">
+                            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                              <div className="w-6 h-6 text-purple-400"><Key /></div>
+                              Enter Decryption Key
+                            </h3>
+
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-gray-400 text-sm mb-2 block">
+                                  Manual Key Entry (32 hex characters):
+                                </label>
+                                <input
+                                  type="text"
+                                  value={userKey}
+                                  onChange={(e) => setUserKey(e.target.value)}
+                                  placeholder="a1b2c3d4e5f6071829304b5c6d7e8f90"
+                                  className="w-full bg-black/30 border border-purple-500/30 rounded-lg px-4 py-3 text-purple-300 font-mono focus:outline-none focus:border-purple-400"
+                                />
+                              </div>
+
+                              <div className="text-center">
+                                <p className="text-gray-500 mb-3">— OR —</p>
+                                <label className="cursor-pointer inline-block bg-slate-700/50 hover:bg-slate-600/50 text-purple-300 px-6 py-3 rounded-lg transition-all border border-purple-500/30">
+                                  <div className="w-5 h-5 inline mr-2"><FileText /></div>
+                                  Load Key from File
+                                  <input
+                                    type="file"
+                                    accept=".key,.txt"
+                                    onChange={handleKeyFileLoad}
+                                    className="hidden"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {!decryptedData ? (
+                            <button
+                              onClick={performDecryption}
+                              disabled={!userKey}
+                              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <div className="w-6 h-6"><Unlock /></div>
+                              Decrypt File
+                            </button>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 text-center">
+                                <div className="text-green-400 text-5xl mb-3">✓</div>
+                                <p className="text-white text-2xl font-semibold mb-2">Decryption Successful!</p>
+                                <p className="text-gray-400">Your file has been decrypted</p>
+                              </div>
+
+                              <button
+                                onClick={downloadDecrypted}
+                                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+                              >
+                                <div className="w-6 h-6"><Download /></div>
+                                Download Decrypted File
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeMode === 'viewkey' && (
+                    <div className="space-y-6">
+                      <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-2">
+                        <div className="w-8 h-8 text-purple-400"><Key /></div>
+                        View Key File
+                      </h2>
+
+                      <label className="cursor-pointer block">
+                        <div className="border-2 border-dashed border-purple-500/50 rounded-xl p-16 hover:border-purple-400 hover:bg-slate-700/30 transition-all text-center">
+                          <div className="w-20 h-20 text-purple-400 mx-auto mb-4"><FileText /></div>
+                          <p className="text-2xl text-purple-200 mb-2">Load Key File</p>
+                          <p className="text-gray-400">Select a .key file to view its contents</p>
+                        </div>
+                        <input
+                          type="file"
+                          accept=".key,.txt"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              const text = await file.text();
+                              setKeyFileContent({ display: text });
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {keyFileContent?.display && (
+                        <div className="bg-slate-900/50 rounded-lg p-6 border border-purple-500/30">
+                          <h3 className="text-xl font-bold text-white mb-4">Key File Contents:</h3>
+                          <div className="bg-black/30 rounded p-4">
+                            <pre className="text-purple-300 font-mono text-sm whitespace-pre-wrap">
+                              {keyFileContent.display}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-8 text-center text-gray-400 text-sm">
+                  <p>⚠️ Educational implementation using XOR cipher • Not for production use</p>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        ReactDOM.render(<AESEncryptionTool />, document.getElementById('root'));
+    </script>
+</body>
+</html>
